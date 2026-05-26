@@ -1,7 +1,7 @@
 // src/api/client.js
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api';
 const ORG_ID   = '288ca24f-4964-4db4-b7e8-79da8a5640b9';
 
 export const orgId = ORG_ID;
