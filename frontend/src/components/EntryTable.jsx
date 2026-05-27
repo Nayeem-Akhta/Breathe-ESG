@@ -10,20 +10,15 @@ export default function EntryTable({ onSelectEntry }) {
   const [actionNote, setActionNote] = useState('');
   const [acting, setActing]     = useState(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-      const res = await getEntries(active);
-      setEntries(res.data.entries);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => { load(); }, [filters]);
+  useEffect(() => {
+    const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
+    setLoading(true);
+    getEntries(active)
+      .then(res => setEntries(res.data.entries))
+      .catch(e => console.error(e))
+      .finally(() => setLoading(false));
+  }, [filters]);
 
   const handleAction = async (id, action) => {
     setActing(id + action);
@@ -65,7 +60,14 @@ export default function EntryTable({ onSelectEntry }) {
             </select>
           ))}
           <button
-            onClick={load}
+            onClick={() => {
+              const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
+              setLoading(true);
+              getEntries(active)
+                .then(res => setEntries(res.data.entries))
+                .catch(e => console.error(e))
+                .finally(() => setLoading(false));
+            }}
             style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#f9fafb', cursor: 'pointer', fontSize: 13 }}
           >
             ↻ Refresh
