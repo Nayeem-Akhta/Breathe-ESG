@@ -1,37 +1,42 @@
 // src/components/EntryTable.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getEntries, approveEntry, rejectEntry, flagEntry } from '../api/client';
 import StatusBadge from './StatusBadge';
 
 export default function EntryTable({ onSelectEntry }) {
-  const [entries, setEntries]   = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [filters, setFilters]   = useState({ status: '', source: '', scope: '' });
-  const [actionNote, setActionNote] = useState('');
-  const [acting, setActing]     = useState(null);
+  const [entries, setEntries]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [filters, setFilters]       = useState({ status: '', source: '', scope: '' });
+  const [acting, setActing]         = useState(null);
 
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
+      const res = await getEntries(active);
+      setEntries(res.data.entries);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
 
   useEffect(() => {
-    const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-    setLoading(true);
-    getEntries(active)
-      .then(res => setEntries(res.data.entries))
-      .catch(e => console.error(e))
-      .finally(() => setLoading(false));
-  }, [filters]);
+    load();
+  }, [load]);
 
   const handleAction = async (id, action) => {
     setActing(id + action);
     try {
-      if (action === 'approve') await approveEntry(id, actionNote);
-      if (action === 'reject')  await rejectEntry(id, actionNote);
-      if (action === 'flag')    await flagEntry(id, actionNote);
+      if (action === 'approve') await approveEntry(id);
+      if (action === 'reject')  await rejectEntry(id);
+      if (action === 'flag')    await flagEntry(id);
       await load();
     } catch (e) {
       alert(e.response?.data?.error || 'Action failed');
     } finally {
       setActing(null);
-      setActionNote('');
     }
   };
 
@@ -42,12 +47,11 @@ export default function EntryTable({ onSelectEntry }) {
           Entries <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 400 }}>({entries.length})</span>
         </h2>
 
-        {/* Filters */}
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            { key: 'status', options: ['', 'PENDING', 'APPROVED', 'REJECTED', 'FLAGGED'], label: 'Status' },
-            { key: 'source', options: ['', 'SAP_FUEL', 'UTILITY_ELECTRICITY', 'TRAVEL'], label: 'Source' },
-            { key: 'scope',  options: ['', 'SCOPE_1', 'SCOPE_2', 'SCOPE_3'], label: 'Scope' },
+            { key: 'status', options: ['PENDING', 'APPROVED', 'REJECTED', 'FLAGGED'], label: 'Status' },
+            { key: 'source', options: ['SAP_FUEL', 'UTILITY_ELECTRICITY', 'TRAVEL'],  label: 'Source' },
+            { key: 'scope',  options: ['SCOPE_1', 'SCOPE_2', 'SCOPE_3'],              label: 'Scope'  },
           ].map(f => (
             <select
               key={f.key}
@@ -56,18 +60,13 @@ export default function EntryTable({ onSelectEntry }) {
               style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
             >
               <option value="">All {f.label}s</option>
-              {f.options.filter(Boolean).map(o => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
+              {f.options.map(o => (
+                <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>
+              ))}
             </select>
           ))}
           <button
-            onClick={() => {
-              const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-              setLoading(true);
-              getEntries(active)
-                .then(res => setEntries(res.data.entries))
-                .catch(e => console.error(e))
-                .finally(() => setLoading(false));
-            }}
+            onClick={load}
             style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#f9fafb', cursor: 'pointer', fontSize: 13 }}
           >
             ↻ Refresh
